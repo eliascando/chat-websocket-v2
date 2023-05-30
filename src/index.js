@@ -9,10 +9,7 @@ const io = require('socket.io')(server, {
 });
 
 io.on('connection', (socket) => {
-    //console.log('Se ha conectado un cliente');
-
     socket.on('chat_message', (data) => {   
-        //console.log(data);
         io.emit('chat_message', data);
     })
 })
