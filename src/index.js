@@ -10,6 +10,7 @@ const io = require('socket.io')(server, {
 const rooms= {};
 
 io.on('connection', (socket) => {
+    console.log('\nse conecto un cliente')
     socket.on('join_room',(data) =>{
         const { room , user} = data;
         socket.join(room);
@@ -17,18 +18,20 @@ io.on('connection', (socket) => {
             rooms[room] = [];
         }
         rooms[room].push(user);
+        console.log(`${user} en sala ${room}`)
         console.log(rooms);
         const message = {
-            usuario: 'INFO',
+            usuario: 'INFO',    
             mensaje: `${user} se ha unido a la sala`
         };
         io.to(room).emit('chat_message', message)
     });
     
-    socket.on('chat_message', (data) => {   
+    socket.on('chat_message', (data) => {  
         const { room, message } = data;
-        io.to(room).emit('chat_message', message);
-        console.log(data)
+        const { usuario, mensaje } = message
+        io.to(room).emit('chat_message', message)
+        console.log(data) 
     });
 })
 
