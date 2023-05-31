@@ -1,17 +1,37 @@
 const http = require('http');
-const { Socket } = require('socket.io');
+const { Server } = require('socket.io');
 
-const port = process.env.PORT || 8080
+const port = process.env.PORT || 8080;
 const server = http.createServer();
-
 const io = require('socket.io')(server, {
     cors: {origin: '*'}
 });
 
+const rooms= {};
+
 io.on('connection', (socket) => {
+    socket.on('join_room',(data) =>{
+        const { room , user} = data;
+        socket.join(room);
+        if(!rooms[room]){
+            rooms[room] = [];
+        }
+        rooms[room].push(user);
+        console.log(rooms);
+        const message = {
+            usuario: 'INFO',
+            mensaje: `${user} se ha unido a la sala`
+        };
+        io.to(room).emit('chat_message', message)
+    });
+    
     socket.on('chat_message', (data) => {   
-        io.emit('chat_message', data);
-    })
+        const { room, message } = data;
+        io.to(room).emit('chat_message', message);
+        console.log(data)
+    });
 })
 
-server.listen(port);
+server.listen(port, () => {
+    console.log(`Server listening on por ${port}`);
+});
