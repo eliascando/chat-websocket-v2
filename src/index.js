@@ -4,64 +4,74 @@ const { Server } = require('socket.io');
 const port = process.env.PORT || 8080;
 const server = http.createServer();
 const io = require('socket.io')(server, {
-    cors: {origin: '*'}
+  cors: { origin: '*' }
 });
 
-const rooms= {};
+const rooms = {};
 
 io.on('connection', (socket) => {
   socket.on('join_room', (data) => {
     const { room, user } = data;
     socket.join(room);
-  
+
     if (!rooms[room]) {
-      rooms[room] = [];
+      rooms[room] = {};
     }
 
-    if (rooms[room].length < 2 && !rooms[room].includes(user)) {
-      rooms[room].push(user);
-      const message = {
-        usuario: 'INFO',
-        mensaje: `${user} se ha conectado`
-      };
-      io.to(room).emit('chat_message', message);
-    } 
+    const numUsers = Object.keys(rooms[room]).length;
+    if (numUsers === 2 || rooms[room][user]) {
+      return;
+    }
 
+    rooms[room][user] = { connected: true };
+
+    // Enviar el estado del otro usuario si está presente
+    const otherUser = Object.keys(rooms[room]).find((username) => username !== user);
+    if (otherUser) {
+      const otherUserState = rooms[room][otherUser].connected;
+      socket.emit('user_connected', { user: otherUser, connected: otherUserState });
+    }
+
+    socket.broadcast.to(room).emit('user_connected', { user, connected: true });
   });
-  
-    
-    socket.on('chat_message', (data) => {  
-        const { room, message } = data;
-        const { usuario, mensaje } = message
-        io.to(room).emit('chat_message', message)
-    });
 
-    socket.on('exit_room', (data) => {
-        const { user, room } = data;
-      
-        // Verificar si el usuario está en la sala
-        if (rooms[room] && rooms[room].includes(user)) {
-          // Remover al usuario de la lista de usuarios de la sala
-          rooms[room] = rooms[room].filter(username => username !== user);
-      
-          // Emitir un mensaje informando la desconexión del usuario
-          const message = {
-            usuario: 'INFO',
-            mensaje: `${user} se ha desconectado`
-          };
-          io.to(room).emit('chat_message', message);
-      
-          socket.leave(room);
-          
-          if (rooms[room].length === 0) {
-              // Eliminar la sala
-              delete rooms[room];
-            }
+  socket.on('chat_message', (data) => {
+    const { room, message } = data;
+    const { usuario, mensaje } = message;
+    io.to(room).emit('chat_message', message);
+  });
+
+  socket.on('exit_room', (data) => {
+    const { user, room } = data;
+
+    if (rooms[room] && rooms[room][user]) {
+      delete rooms[room][user];
+
+      socket.broadcast.to(room).emit('user_disconnected', { user, connected: false });
+
+      socket.leave(room);
+
+      if (Object.keys(rooms[room]).length === 0) {
+        delete rooms[room];
+      }
+    }
+  });
+
+  socket.on('disconnect', () => {
+    Object.keys(rooms).forEach((room) => {
+      if (rooms[room][socket.id]) {
+        const user = Object.keys(rooms[room]).find((username) => username === socket.id);
+        delete rooms[room][user];
+        socket.broadcast.to(room).emit('user_disconnected', { user, connected: false });
+
+        if (Object.keys(rooms[room]).length === 0) {
+          delete rooms[room];
         }
-        console.log(rooms)
-      });
-})
+      }
+    });
+  });
+});
 
 server.listen(port, () => {
-    console.log(`Server listening on por ${port}`);
+  console.log(`Server listening on port ${port}`);
 });
