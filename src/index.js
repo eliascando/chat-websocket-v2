@@ -34,12 +34,13 @@ io.on('connection', (socket) => {
 
     socket.broadcast.to(room).emit('user_connected', { user, connected: true });
   });
-
-  socket.on('chat_message', (data) => {
-    const { room, message } = data;
-    const { usuario, mensaje } = message;
-    io.to(room).emit('chat_message', message);
-  });
+  
+    
+    socket.on('chat_message', (data) => {  
+        const { room, message } = data;
+        const { usuario, mensaje } = message
+        io.to(room).emit('chat_message', message)
+    });
 
   socket.on('exit_room', (data) => {
     const { user, room } = data;
