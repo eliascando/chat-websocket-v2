@@ -58,7 +58,6 @@ io.on('connection', (socket) => {
               delete rooms[room];
             }
         }
-        console.log(rooms)
       });
 })
 
