@@ -10,23 +10,25 @@ const io = require('socket.io')(server, {
 const rooms= {};
 
 io.on('connection', (socket) => {
-    socket.on('join_room', (data) => {
-        const { room, user } = data;
-        socket.join(room);
-      
-        if (!rooms[room]) {
-          rooms[room] = [];
-        }
-      
-        if (!rooms[room].includes(user)) {
-            rooms[room].push(user);
-            const message = {
-              usuario: 'INFO',
-              mensaje: `${user} se ha unido a la sala`
-            };
-            io.to(room).emit('chat_message', message);
-        }
-    });
+  socket.on('join_room', (data) => {
+    const { room, user } = data;
+    socket.join(room);
+  
+    if (!rooms[room]) {
+      rooms[room] = [];
+    }
+
+    if (rooms[room].length < 2 && !rooms[room].includes(user)) {
+      rooms[room].push(user);
+      const message = {
+        usuario: 'INFO',
+        mensaje: `${user} se ha conectado`
+      };
+      io.to(room).emit('chat_message', message);
+    } 
+
+  });
+  
     
     socket.on('chat_message', (data) => {  
         const { room, message } = data;
@@ -45,7 +47,7 @@ io.on('connection', (socket) => {
           // Emitir un mensaje informando la desconexión del usuario
           const message = {
             usuario: 'INFO',
-            mensaje: `${user} se ha desconectado de la sala ${room}`
+            mensaje: `${user} se ha desconectado`
           };
           io.to(room).emit('chat_message', message);
       
@@ -56,9 +58,8 @@ io.on('connection', (socket) => {
               delete rooms[room];
             }
         }
+        console.log(rooms)
       });
-      
-      
 })
 
 server.listen(port, () => {
